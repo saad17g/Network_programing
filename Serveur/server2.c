@@ -92,15 +92,14 @@ static void app(void)
 
          FD_SET(csock, &rdfs);
 
-         //TODO: Check if name is unique
+         /* Check if name is unique */
          Client c = { csock };
          strncpy(c.name, buffer, BUF_SIZE - 1);
          int notPresent = 0;
          for(int i = 0; i<actual; i++)
          {
-            printf("%s\n", clients[i].name);
             if(strcmp(clients[i].name, c.name)==0){
-               write_client(c.sock, "this name is already taken, reconnect with another name");
+               write_client(c.sock, "This name is already taken, reconnect with another name");
                notPresent = 1;
                break;
             }
@@ -111,6 +110,10 @@ static void app(void)
          } else {
             closesocket(c.sock);
          }
+
+         /* Add new client to group 0 (AKA main group) */
+         clients[actual].groupId = 0;
+
       }
       else
       {
@@ -129,35 +132,36 @@ static void app(void)
                   remove_client(clients, i, &actual);
                   strncpy(buffer, client.name, BUF_SIZE - 1);
                   strncat(buffer, " disconnected !", BUF_SIZE - strlen(buffer) - 1);
-                  send_message_to_all_clients(clients, client, actual, buffer, 1);
+                  send_message_to_all_clients_in_group(clients, client, actual, buffer, 1, client.groupId);
                }
                else
                {
-                  /* check if it's a command */
+                  /* Check if it's a command */
                   enum COMMAND cmd = resolve_command(buffer);
+                  int j;
                   switch (cmd)
                   {
                   case NO_COMMAND:
-                     send_message_to_all_clients(clients, client, actual, buffer, 0);
+                     send_message_to_all_clients_in_group(clients, client, actual, buffer, 0, client.groupId);
                      break;
                   case PRIVATE_MSG_COMMAND:
                      /* Get destination client name*/
                      char name[BUF_SIZE];
-                     int i=3;
-                     while(buffer[i] != ' ' && i<BUF_SIZE)
+                     j=3;
+                     while(buffer[j] != ' ' && j<BUF_SIZE)
                      {
-                        name[i-3] = buffer[i];
-                        i++;
+                        name[j-3] = buffer[j];
+                        j++;
                      }
-                     name[i-3] = '\0';
+                     name[j-3] = '\0';
 
                      /* Find client from name */
                      Client* dest = NULL;
-                     for(i = 0; i < actual; i++)
+                     for(j = 0; j < actual; j++)
                      {
-                        if(strcmp(clients[i].name,name) == 0)
+                        if(strcmp(clients[j].name,name) == 0)
                         {
-                           dest = &clients[i];
+                           dest = &clients[j];
                         }
                      }
                      
@@ -173,6 +177,37 @@ static void app(void)
                         /* Send the private message */
                         send_private_message_to_client(*dest, client, buffer);
                      }
+                     break;
+                  case CHANGE_GROUP_COMMAND:
+                     /* Get destination group name*/
+                     char group_name[BUF_SIZE];
+                     j=6;
+                     while(buffer[j] != ' ' && j<BUF_SIZE)
+                     {
+                        group_name[j-6] = buffer[j];
+                        j++;
+                     }
+                     name[j-3] = '\0';
+
+                     /* Alert people in the room that client leaved */
+                     char msg[BUF_SIZE];
+                     strncpy(msg, client.name, BUF_SIZE - 1);
+                     strncat(msg, " leaved the room", sizeof msg - strlen(msg) - 1);
+                     send_message_to_all_clients_in_group(clients,client,actual,msg,1,clients[i].groupId);
+
+                     /* WIP: Only numbers for now */
+                     clients[i].groupId = atoi(group_name);
+                     
+                     /* Send success message to client */
+                     strncpy(msg, "Joined chatroom ", BUF_SIZE - 1);
+                     strncat(msg, group_name, sizeof msg - strlen(msg) - 1);
+                     write_client(client.sock, msg);
+
+                     /* Alert people in the new group that client joined  */
+                     strncpy(msg, client.name, BUF_SIZE - 1);
+                     strncat(msg, " joined the room", sizeof msg - strlen(msg) - 1);
+                     send_message_to_all_clients_in_group(clients,client,actual,msg,1,clients[i].groupId);
+
                      break;
                   case UNKNOWN_COMMAND:
                      write_client(client.sock, "Unknown command");
@@ -207,22 +242,50 @@ static void remove_client(Client *clients, int to_remove, int *actual)
    (*actual)--;
 }
 
+/* Send a message to every user in a group */
+static void send_message_to_all_clients_in_group(Client *clients, Client sender, int actual, const char *buffer, char from_server, int group)
+{  
+   int i = 0;
+   char message[BUF_SIZE];
+   message[0] = 0;
+
+   if(from_server == 0)
+   {
+      strncpy(message, sender.name, BUF_SIZE - 1);
+      strncat(message, " : ", sizeof message - strlen(message) - 1);
+   }
+   strncat(message, buffer, sizeof message - strlen(message) - 1);
+
+   for(i = 0; i < actual; i++)
+   {  
+      if(group == clients[i].groupId)
+      {
+         /* we don't send message to the sender */
+         if(sender.sock != clients[i].sock)
+         {
+            write_client(clients[i].sock, message);
+         }
+      }
+   }
+}
+
 static void send_message_to_all_clients(Client *clients, Client sender, int actual, const char *buffer, char from_server)
 {
    int i = 0;
    char message[BUF_SIZE];
    message[0] = 0;
-   for(i = 0; i < actual; i++)
+   if(from_server == 0)
    {
+      strncpy(message, sender.name, BUF_SIZE - 1);
+      strncat(message, " : ", sizeof message - strlen(message) - 1);
+   }
+   strncat(message, buffer, sizeof message - strlen(message) - 1);
+
+   for(i = 0; i < actual; i++)
+   {  
       /* we don't send message to the sender */
       if(sender.sock != clients[i].sock)
       {
-         if(from_server == 0)
-         {
-            strncpy(message, sender.name, BUF_SIZE - 1);
-            strncat(message, " : ", sizeof message - strlen(message) - 1);
-         }
-         strncat(message, buffer, sizeof message - strlen(message) - 1);
          write_client(clients[i].sock, message);
       }
    }
@@ -249,7 +312,12 @@ static enum COMMAND resolve_command(const char *buffer)
       if(starts_with(buffer, "/m ")){
          return PRIVATE_MSG_COMMAND;
       }
-      else{
+      else if(starts_with(buffer, "/join"))
+      {
+         return CHANGE_GROUP_COMMAND;
+      }
+      else
+      {
          return UNKNOWN_COMMAND;
       }
    }
