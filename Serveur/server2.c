@@ -100,7 +100,6 @@ static void app(void)
          {
             printf("%s\n", clients[i].name);
             if(strcmp(clients[i].name, c.name)==0){
-               printf("found duplicate\n");
                write_client(c.sock, "this name is already taken, reconnect with another name");
                notPresent = 1;
                break;
