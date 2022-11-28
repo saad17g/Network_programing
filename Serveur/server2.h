@@ -36,7 +36,7 @@ typedef struct in_addr IN_ADDR;
 
 #include "client2.h"
 
-static enum COMMAND {NO_COMMAND, PRIVATE_MSG_COMMAND, UNKNOWN_COMMAND};
+static enum COMMAND {NO_COMMAND, PRIVATE_MSG_COMMAND, CHANGE_GROUP_COMMAND, UNKNOWN_COMMAND};
 
 static void init(void);
 static void end(void);
@@ -46,6 +46,7 @@ static void end_connection(int sock);
 static int read_client(SOCKET sock, char *buffer);
 static void write_client(SOCKET sock, const char *buffer);
 static void send_message_to_all_clients(Client *clients, Client client, int actual, const char *buffer, char from_server);
+static void send_message_to_all_clients_in_group(Client *clients, Client sender, int actual, const char *buffer, char from_server, int group);
 static void send_private_message_to_client(Client dest, Client sender, const char *buffer);
 static void remove_client(Client *clients, int to_remove, int *actual);
 static void clear_clients(Client *clients, int actual);
