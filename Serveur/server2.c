@@ -95,8 +95,23 @@ static void app(void)
          //TODO: Check if name is unique
          Client c = { csock };
          strncpy(c.name, buffer, BUF_SIZE - 1);
-         clients[actual] = c;
-         actual++;
+         int notPresent = 0;
+         for(int i = 0; i<actual; i++)
+         {
+            printf("%s\n", clients[i].name);
+            if(strcmp(clients[i].name, c.name)==0){
+               printf("found duplicate\n");
+               write_client(c.sock, "this name is already taken, reconnect with another name");
+               notPresent = 1;
+               break;
+            }
+         }
+         if(notPresent==0){
+            clients[actual] = c;
+            actual++;
+         } else {
+            closesocket(c.sock);
+         }
       }
       else
       {
