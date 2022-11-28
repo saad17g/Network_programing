@@ -245,7 +245,6 @@ static void remove_client(Client *clients, int to_remove, int *actual)
 /* Send a message to every user in a group */
 static void send_message_to_all_clients_in_group(Client *clients, Client sender, int actual, const char *buffer, char from_server, int group)
 {  
-   printf("%s\n",buffer);
    int i = 0;
    char message[BUF_SIZE];
    message[0] = 0;
