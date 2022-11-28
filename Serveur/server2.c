@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <errno.h>
 #include <string.h>
+#include <stdbool.h>
 
 #include "server2.h"
 #include "client2.h"
@@ -118,7 +119,52 @@ static void app(void)
                }
                else
                {
-                  send_message_to_all_clients(clients, client, actual, buffer, 0);
+                  /* check if it's a command */
+                  enum COMMAND cmd = resolve_command(buffer);
+                  switch (cmd)
+                  {
+                  case NO_COMMAND:
+                     send_message_to_all_clients(clients, client, actual, buffer, 0);
+                     break;
+                  case PRIVATE_MSG_COMMAND:
+                     /* Get destination client name*/
+                     char name[BUF_SIZE];
+                     int i=3;
+                     while(buffer[i] != ' ' && i<BUF_SIZE)
+                     {
+                        name[i-3] = buffer[i];
+                        i++;
+                     }
+                     name[i-3] = '\0';
+
+                     /* Find client from name */
+                     Client* dest = NULL;
+                     for(i = 0; i < actual; i++)
+                     {
+                        if(strcmp(clients[i].name,name) == 0)
+                        {
+                           dest = &clients[i];
+                        }
+                     }
+                     
+                     if(dest == NULL)
+                     {
+                        write_client(client.sock, "Destination user not found");
+                     }
+                     else
+                     {
+                        /* Create a new buffer without the command and the name */
+                        memmove(buffer,buffer+4+strlen(name),strlen(buffer));
+
+                        /* Send the private message */
+                        send_private_message_to_client(*dest, client, buffer);
+                     }
+                     break;
+                  case UNKNOWN_COMMAND:
+                     write_client(client.sock, "Unknown command");
+                  default:
+                     break;
+                  }
                }
                break;
             }
@@ -166,6 +212,50 @@ static void send_message_to_all_clients(Client *clients, Client sender, int actu
          write_client(clients[i].sock, message);
       }
    }
+}
+
+static void send_private_message_to_client(Client dest, Client sender, const char *buffer)
+{
+   int i = 0;
+   char message[BUF_SIZE];
+   message[0] = 0;
+
+   strncpy(message, "De [", BUF_SIZE - 1);
+   strncat(message, sender.name, sizeof message - strlen(message) - 1);
+   strncat(message, "] : ", sizeof message - strlen(message) - 1);
+
+   strncat(message, buffer, sizeof message - strlen(message) - 1);
+   write_client(dest.sock, message);
+}
+
+static enum COMMAND resolve_command(const char *buffer)
+{  
+   /* check if it's a command */
+   if(buffer[0] == '/'){
+      if(starts_with(buffer, "/m ")){
+         return PRIVATE_MSG_COMMAND;
+      }
+      else{
+         return UNKNOWN_COMMAND;
+      }
+   }
+   else
+   {  
+      return NO_COMMAND;
+   }
+}
+
+static bool starts_with(const char *buffer, const char *substr)
+{  
+   bool startsWith = false;
+   for (int i = 0; substr[i] != '\0'; i++) {
+      if (buffer[i] != substr[i]) {
+         startsWith = false;
+            break;
+         }
+      startsWith = true;
+   }
+   return startsWith;
 }
 
 static int init_connection(void)
