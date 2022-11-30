@@ -143,6 +143,7 @@ static void app(void)
                   {
                   case NO_COMMAND:
                      send_message_to_all_clients_in_group(clients, client, actual, buffer, 0, client.groupId);
+                     add_message_to_group_historic(client,buffer,0,client.groupId);
                      break;
                   case PRIVATE_MSG_COMMAND:
                      /* Get destination client name*/
@@ -201,11 +202,19 @@ static void app(void)
                      /* Send success message to client */
                      strncpy(msg, "Joined chatroom ", BUF_SIZE - 1);
                      strncat(msg, group_name, sizeof msg - strlen(msg) - 1);
+                     strncat(msg,"\n", sizeof msg - strlen(msg) - 1);
+                     write_client(client.sock, msg);
+
+                     /* Show historic of the channel to the client */
+                     strncpy(msg,"------Historic of the room------",BUF_SIZE - 1);
+                     write_client(client.sock, msg);
+                     send_group_historic_to_client(client,clients[i].groupId);
+                     strncpy(msg,"--------End of historic---------",BUF_SIZE - 1);
                      write_client(client.sock, msg);
 
                      /* Alert people in the new group that client joined  */
                      strncpy(msg, client.name, BUF_SIZE - 1);
-                     strncat(msg, " joined the room", sizeof msg - strlen(msg) - 1);
+                     strncat(msg, " joined the room\n", sizeof msg - strlen(msg) - 1);
                      send_message_to_all_clients_in_group(clients,client,actual,msg,1,clients[i].groupId);
 
                      break;
@@ -351,6 +360,63 @@ static bool starts_with(const char *buffer, const char *substr)
       startsWith = true;
    }
    return startsWith;
+}
+
+static void add_message_to_group_historic(Client sender, const char *buffer, char from_server, int group)
+{  
+   char message[BUF_SIZE];
+   message[0] = 0;
+
+   char groupnb[10];
+   sprintf(groupnb, "%d", group);
+   if(group != 0)
+   {
+      strncpy(message, "[Group ", BUF_SIZE - 1);
+      strncat(message, groupnb, sizeof message - strlen(message) - 1);
+      strncat(message, "] ", sizeof message - strlen(message) - 1);
+   }
+   else
+   {
+      strncpy(message, "[General] ", BUF_SIZE - 1);
+   }
+
+   if(from_server == 0)
+   {
+      strncat(message, sender.name, sizeof message - strlen(message) - 1);
+      strncat(message, " : ", sizeof message - strlen(message) - 1);
+   }
+   strncat(message, buffer, sizeof message - strlen(message) - 1);
+
+   if(chdir("../Historique")==0){
+      FILE * file;
+      char groupnb[15];
+      sprintf(groupnb, "%d", group);
+
+      file = fopen(strcat(groupnb,".txt"),"a");
+      fprintf(file,"%s",strcat(message,"\n"));
+      fclose(file);
+   }
+   
+}
+
+static void send_group_historic_to_client(Client client, int group)
+{
+   if(chdir("../Historique")==0)
+   {
+      FILE * file;
+      char groupnb[15];
+      sprintf(groupnb, "%d", group);
+      file = fopen(strcat(groupnb,".txt"),"r");
+      char buffer[BUF_SIZE];
+      if(file != NULL)
+      {  
+         while(fgets(buffer,BUF_SIZE,file))
+         {
+            write_client(client.sock,buffer);
+         }
+         fclose(file);
+      }
+   }
 }
 
 static int init_connection(void)

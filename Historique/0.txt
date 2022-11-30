@@ -1,0 +1,8 @@
+[General] Arthur : Salut
+[General] Saad : Salut Arthur!
+[General] Arthur : Je vais au salon 1
+[General] Arthur : Salut
+[General] Erwaan : Bonjour
+[General] Saad : J'adore la prog reso
+[General] Erwaan : Moi aussi
+[General] Arthur : Moi non
