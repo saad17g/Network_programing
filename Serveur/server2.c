@@ -249,9 +249,22 @@ static void send_message_to_all_clients_in_group(Client *clients, Client sender,
    char message[BUF_SIZE];
    message[0] = 0;
 
+   char groupnb[10];
+   sprintf(groupnb, "%d", group);
+   if(group != 0)
+   {
+      strncpy(message, "[Group ", BUF_SIZE - 1);
+      strncat(message, groupnb, sizeof message - strlen(message) - 1);
+      strncat(message, "] ", sizeof message - strlen(message) - 1);
+   }
+   else
+   {
+      strncpy(message, "[General] ", BUF_SIZE - 1);
+   }
+
    if(from_server == 0)
    {
-      strncpy(message, sender.name, BUF_SIZE - 1);
+      strncat(message, sender.name, sizeof message - strlen(message) - 1);
       strncat(message, " : ", sizeof message - strlen(message) - 1);
    }
    strncat(message, buffer, sizeof message - strlen(message) - 1);
