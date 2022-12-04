@@ -5,7 +5,7 @@
 
 #include <winsock2.h>
 
-#elif defined (linux)
+#elif defined(linux)
 
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -13,7 +13,7 @@
 #include <arpa/inet.h>
 #include <stdbool.h>
 #include <unistd.h> /* close */
-#include <netdb.h> /* gethostbyname */
+#include <netdb.h>  /* gethostbyname */
 #define INVALID_SOCKET -1
 #define SOCKET_ERROR -1
 #define closesocket(s) close(s)
@@ -28,15 +28,18 @@ typedef struct in_addr IN_ADDR;
 
 #endif
 
-#define CRLF        "\r\n"
-#define PORT         1977
-#define MAX_CLIENTS     100
+#define CRLF "\r\n"
+#define PORT 1977
+#define MAX_CLIENTS 100
 
-#define BUF_SIZE    1024
+#define BUF_SIZE 1024
 
 #include "client2.h"
 
-static enum COMMAND {NO_COMMAND, PRIVATE_MSG_COMMAND, CHANGE_GROUP_COMMAND, UNKNOWN_COMMAND};
+static enum COMMAND { NO_COMMAND,
+                      PRIVATE_MSG_COMMAND,
+                      CHANGE_GROUP_COMMAND,
+                      UNKNOWN_COMMAND };
 
 static void init(void);
 static void end(void);

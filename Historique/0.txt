@@ -6,3 +6,9 @@
 [General] Saad : J'adore la prog reso
 [General] Erwaan : Moi aussi
 [General] Arthur : Moi non
+[General] arth : slaut
+[General] arth : salut
+[General] saad : hello
+[General] moi : hello
+[General] arth : mdr il est parti
+[General] moi : oui

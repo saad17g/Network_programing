@@ -8,6 +8,6 @@ typedef struct
    SOCKET sock;
    char name[BUF_SIZE];
    int groupId;
-}Client;
+} Client;
 
 #endif /* guard */
